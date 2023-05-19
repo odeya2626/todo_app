@@ -1,0 +1,130 @@
+from fastapi import (
+    FastAPI,
+    APIRouter,
+    Depends,
+    Path,
+    Body,
+    HTTPException,
+    status,
+    Request,
+)
+from sqlalchemy.orm import Session
+from typing import Annotated
+from pydantic import BaseModel, Field
+
+from models import Todos
+from db import db_dependency
+from .auth import get_current_user
+
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+
+router = APIRouter(prefix="/todos", tags=["todos"])
+
+templates = Jinja2Templates(directory="templates")
+
+
+# def get_db():
+#     db = SessionLocal()
+#     try:
+#         yield db
+#     finally:
+#         db.close()
+
+
+# db_dependency = Annotated[Session, Depends(get_db)]
+user_dependency = Annotated[dict, Depends(get_current_user)]
+
+
+class TodoRequest(BaseModel):
+    title: str = Field(min_length=3)
+    description: str = Field(min_length=3, max_length=100)
+    priority: int = Field(ge=1, le=5)
+    completed: bool
+
+
+@router.get("/home", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse("edit-todo.html", {"request": request})
+
+
+@router.get("/")
+async def read_all(user: user_dependency, db: db_dependency):
+    if user is None:
+        raise HTTPException(
+            status_code=401, detail="Invalid authentication credentials"
+        )
+    return db.query(Todos).filter(Todos.owner_id == user.get("user_id")).all()
+
+
+@router.get("/{todo_id}", status_code=status.HTTP_200_OK)
+async def read_one(user: user_dependency, db: db_dependency, todo_id: int = Path(gt=0)):
+    todo_item = (
+        db.query(Todos)
+        .filter(Todos.id == todo_id)
+        .filter(Todos.owner_id == user.get("id"))
+        .first()
+    )
+    if todo_item is not None:
+        return todo_item
+    raise HTTPException(status_code=404, detail="Item not found")
+
+
+@router.post("", status_code=status.HTTP_201_CREATED)
+async def create_one(user: user_dependency, db: db_dependency, todo_req: TodoRequest):
+    if user is None:
+        raise HTTPException(
+            status_code=401, detail="Invalid authentication credentials"
+        )
+    todo_item = Todos(**todo_req.dict(), owner_id=user.get("id"))
+    db.add(todo_item)
+    db.commit()
+
+
+@router.put("/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def update_one(
+    user: user_dependency,
+    db: db_dependency,
+    todo_req: TodoRequest,
+    todo_id: int = Path(gt=0),
+):
+    if user is None:
+        raise HTTPException(
+            status_code=401, detail="Invalid authentication credentials"
+        )
+    todo_item = (
+        db.query(Todos)
+        .filter(Todos.id == todo_id)
+        .filter(Todos.owner_id == user.get("id"))
+        .first()
+    )
+    if todo_item is not None:
+        todo_item.title = todo_req.title
+        todo_item.description = todo_req.description
+        todo_item.priority = todo_req.priority
+        todo_item.completed = todo_req.completed
+        db.add(todo_item)
+        db.commit()
+        return
+    raise HTTPException(status_code=404, detail="Item not found")
+
+
+@router.delete("/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_one(
+    user: user_dependency, db: db_dependency, todo_id: int = Path(gt=0)
+):
+    if user is None:
+        raise HTTPException(
+            status_code=401, detail="Invalid authentication credentials"
+        )
+    todo_item = (
+        db.query(Todos)
+        .filter(Todos.id == todo_id)
+        .filter(Todos.owner_id == user.get("id"))
+        .first()
+    )
+    if todo_item is not None:
+        db.delete(todo_item)
+        db.commit()
+        return
+    raise HTTPException(status_code=404, detail="Item not found")

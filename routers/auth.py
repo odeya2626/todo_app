@@ -1,4 +1,14 @@
-from fastapi import FastAPI, APIRouter, Depends, Path, Body, HTTPException, status
+from fastapi import (
+    FastAPI,
+    APIRouter,
+    Depends,
+    Path,
+    Body,
+    HTTPException,
+    status,
+    Request,
+    Response,
+)
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from passlib.context import CryptContext
@@ -6,16 +16,33 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from typing import Annotated
 from jose import JWTError, jwt
 from datetime import timedelta, datetime
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+
 
 from db import db_dependency
 from models import User
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(
+    prefix="/auth", tags=["auth"], responses={401: {"user": "Not authorized"}}
+)
 SECRET_KEY = "vghlkjk,mcxsseaerfuiojml, mnvfxdsredui786554432"
 ALGORITHM = "HS256"
-
+templates = Jinja2Templates(directory="templates")
 bcrypt = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_bearer = OAuth2PasswordBearer(tokenUrl="auth/token")
+
+
+class LoginForm:
+    def __init__(self, request: Request) -> None:
+        self.request: Request = request
+        self.username: str = None
+        self.password: str = None
+
+    async def create_oath_from(self):
+        form = await self.request.form()
+        self.username = form.get("username")
+        self.password = form.get("password")
 
 
 class CreateUserRequest(BaseModel):
@@ -84,7 +111,9 @@ async def create_user(db: db_dependency, create_user_request: CreateUserRequest)
 
 @router.post("/token", status_code=status.HTTP_200_OK)
 async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: db_dependency
+    response: Response,
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    db: db_dependency,
 ):
     user = authenticate_user(form_data.username, form_data.password, db)
     if not user:
@@ -92,4 +121,39 @@ async def login_for_access_token(
     token = create_access_token(
         user.username, user.id, user.role, timedelta(minutes=30)
     )
-    return {"access_token": token, "token_type": "bearer"}
+    response.set_cookie(key="access_token", value=token, httponly=True)
+    return True
+    # return {"access_token": token, "token_type": "bearer"}
+
+
+@router.get("/", response_class=HTMLResponse)
+async def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@router.post("/", response_class=HTMLResponse)
+async def login(request: Request, db: db_dependency):
+    try:
+        form = LoginForm(request)
+        await form.create_oath_from()
+        response = RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
+
+        validate_user_cookie = await login_for_access_token(
+            response=response, form_data=form, db=db
+        )
+        if not validate_user_cookie:
+            msg = "Invalid username or password"
+            return templates.TemplateResponse(
+                "login.html", {"request": request, "msg": msg}
+            )
+        return response
+    except HTTPException:
+        msg = "Unknow error"
+        return templates.TemplateResponse(
+            "login.html", {"request": request, "msg": msg}
+        )
+
+
+@router.get("/register", response_class=HTMLResponse)
+async def register(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request})

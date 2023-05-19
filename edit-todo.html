@@ -1,0 +1,50 @@
+
+
+{% include 'layout.html' %}
+<div class="container">
+  <div class="card">
+    <div class="card-header">Edit Todo</div>
+    <div class="card-body">
+      <form method="POST">
+        <div class="form-group">
+          <label for="title">Title</label>
+          <input
+            type="text"
+            value="{{todo.title}}"
+            class="form-control"
+            id="title"
+            name="title"
+            placeholder="Enter todo"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea
+            rows="3"
+   
+            class="form-control"
+            name="description"
+            placeholder="Enter todo"
+            required
+          >{{todo.description}}</textarea>
+        </div>
+        <div class="form-group">
+          <label for="priority">Priority</label>
+          <select name="priority" class="form-control">
+            {% for priority in [1,2,3,4,5] %}
+            <option value="{{priority}}" 
+            {% if priority == todo.priority %}
+            selected="selected" 
+            {% endif %}>
+            {{priority}}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <button class="btn btn-primary" type="submit">Edit</button>
+        <button class="btn btn-danger" onclick="window.location.href ='/todos/delete/{{todo.id}}'" type="button">Delete</button>
+      </form>
+    </div>
+  </div>
+</div>

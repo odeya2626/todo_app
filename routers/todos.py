@@ -52,7 +52,7 @@ async def read_all_by_user(request: Request, user: user_dependency, db: db_depen
     todos = (
         db.query(Todos)
         .filter(Todos.owner_id == user.get("user_id"))
-        .order_by(Todos.priority.desc())
+        .order_by(Todos.priority)
         .all()
     )
     return templates.TemplateResponse(
@@ -108,7 +108,6 @@ async def edit_todo(
         .filter(Todos.owner_id == user.get("user_id"))
         .first()
     )
-   
 
     return templates.TemplateResponse(
         "edit-todo.html", {"request": request, "user": user, "todo": todo_item}
@@ -129,7 +128,7 @@ async def edit_todo(
     if user is None:
         return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
     todo_item = db.query(Todos).filter(Todos.id == todo_id).first()
-   
+    print(title)
     todo_item.title = title
     todo_item.description = description
     todo_item.priority = priority
@@ -139,18 +138,25 @@ async def edit_todo(
     return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
 
 
-@router.post("/delete/{todo_id}", response_class=HTMLResponse)
+@router.get("/delete/{todo_id}", response_class=HTMLResponse)
 async def delete_todo(
     request: Request,
     db: db_dependency,
     user: user_dependency,
     todo_id: int,
 ):
+
     if user is None:
         return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
 
-    todo_item = db.query(Todos).filter(Todos.id == todo_id).first()
+    todo_item = db.query(Todos).filter(Todos.id == todo_id).filter(Todos.owner_id == user.get("user_id")).first()
+
+    if todo_item is None:
+        return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
+    
+    # db.query(Todos).filter(Todos.id == todo_id).delete()
     db.delete(todo_item)
+  
     db.commit()
     return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
 
@@ -161,9 +167,9 @@ async def complete_todo(
 ):
     if user is None:
         return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
-
+    print('hi')
     todo_item = db.query(Todos).filter(Todos.id == todo_id).first()
-   
+    print(todo_item)
     todo_item.completed = not todo_item.completed
     db.add(todo_item)
     db.commit()

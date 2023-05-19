@@ -99,6 +99,7 @@ async def edit_todo(
     user: user_dependency,
     todo_id: int = Path(gt=0),
 ):
+  
     if user is None:
         return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
     todo_item = (
@@ -107,6 +108,7 @@ async def edit_todo(
         .filter(Todos.owner_id == user.get("user_id"))
         .first()
     )
+   
 
     return templates.TemplateResponse(
         "edit-todo.html", {"request": request, "user": user, "todo": todo_item}
@@ -119,24 +121,25 @@ async def edit_todo(
     db: db_dependency,
     user: user_dependency,
     todo_id: int,
-    title: str,
-    description: str,
-    priority: int,
-    completed: bool,
+    title: str=Form(...),
+    description: str = Form(...),
+    priority: int   = Form(...),
 ):
+
     if user is None:
         return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
     todo_item = db.query(Todos).filter(Todos.id == todo_id).first()
+   
     todo_item.title = title
     todo_item.description = description
     todo_item.priority = priority
-    todo_item.completed = completed
+
     db.add(todo_item)
     db.commit()
     return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
 
 
-@router.post("delete/{todo_id}", response_class=HTMLResponse)
+@router.post("/delete/{todo_id}", response_class=HTMLResponse)
 async def delete_todo(
     request: Request,
     db: db_dependency,
@@ -152,14 +155,16 @@ async def delete_todo(
     return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
 
 
-@router.get("complete/{todo_id}", response_class=HTMLResponse)
+@router.get("/complete/{todo_id}", response_class=HTMLResponse)
 async def complete_todo(
     request: Request, user: user_dependency, db: db_dependency, todo_id: int
 ):
     if user is None:
         return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
+
     todo_item = db.query(Todos).filter(Todos.id == todo_id).first()
-    todo_item.completed = True
+   
+    todo_item.completed = not todo_item.completed
     db.add(todo_item)
     db.commit()
     return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)

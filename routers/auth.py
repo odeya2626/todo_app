@@ -102,9 +102,7 @@ async def get_current_user(request: Request):
             logout(request)
         return {"username": username, "user_id": user_id, "user_role": user_role}
     except JWTError:
-        raise HTTPException(
-            status_code=401, detail="Invalid authentication credentials"
-        )
+        raise HTTPException(status_code=404, detail="Not Found")
 
 
 # @router.post("/", status_code=status.HTTP_201_CREATED)

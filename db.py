@@ -6,7 +6,8 @@ from typing import Annotated
 from fastapi import Depends
 
 
-SQLALCHEMY_DATABASE_URL = "postgresql://postgres:odeya2626@localhost:5432/todo_app_db"
+SQLALCHEMY_DATABASE_URL = "postgresql://fwambttb:JoXQCdvCzFEVpUSYHFbPQr128CDvDDhh@horton.db.elephantsql.com/fwambttb"
+# SQLALCHEMY_DATABASE_URL = "postgresql://postgres:odeya2626@localhost:5432/todo_app_db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 # SQLALCHEMY_DATABASE_URL = "sqlite:///./todo_app.db"
 # engine = create_engine(

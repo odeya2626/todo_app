@@ -99,7 +99,6 @@ async def edit_todo(
     user: user_dependency,
     todo_id: int = Path(gt=0),
 ):
-  
     if user is None:
         return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
     todo_item = (
@@ -120,11 +119,10 @@ async def edit_todo(
     db: db_dependency,
     user: user_dependency,
     todo_id: int,
-    title: str=Form(...),
+    title: str = Form(...),
     description: str = Form(...),
-    priority: int   = Form(...),
+    priority: int = Form(...),
 ):
-
     if user is None:
         return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
     todo_item = db.query(Todos).filter(Todos.id == todo_id).first()
@@ -145,18 +143,22 @@ async def delete_todo(
     user: user_dependency,
     todo_id: int,
 ):
-
     if user is None:
         return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
 
-    todo_item = db.query(Todos).filter(Todos.id == todo_id).filter(Todos.owner_id == user.get("user_id")).first()
+    todo_item = (
+        db.query(Todos)
+        .filter(Todos.id == todo_id)
+        .filter(Todos.owner_id == user.get("user_id"))
+        .first()
+    )
 
     if todo_item is None:
         return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
-    
+
     # db.query(Todos).filter(Todos.id == todo_id).delete()
     db.delete(todo_item)
-  
+
     db.commit()
     return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
 
@@ -167,7 +169,7 @@ async def complete_todo(
 ):
     if user is None:
         return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
-    print('hi')
+    print("hi")
     todo_item = db.query(Todos).filter(Todos.id == todo_id).first()
     print(todo_item)
     todo_item.completed = not todo_item.completed

@@ -15,7 +15,7 @@ app.include_router(admin.router)
 app.include_router(users.router)
 
 
-models.Base.metadata.create_all(bind=engine)
+# models.Base.metadata.create_all(bind=engine)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
@@ -25,4 +25,4 @@ async def root():
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", port=8000, host="127.0.0.1")
+    uvicorn.run("main:app", port=8000, host="0.0.0.0")

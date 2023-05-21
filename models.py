@@ -41,6 +41,6 @@ class Address(Base):
     user_address = relationship("User", back_populates="address")
 
 
-User.__table__.create(bind=engine, checkfirst=True)
-Todos.__table__.create(bind=engine, checkfirst=True)
-Address.__table__.create(bind=engine, checkfirst=True)
+# User.__table__.create(bind=engine, checkfirst=True)
+# Todos.__table__.create(bind=engine, checkfirst=True)
+# Address.__table__.create(bind=engine, checkfirst=True)

@@ -19,6 +19,7 @@ from jose import JWTError, jwt
 from datetime import timedelta, datetime
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import select
 
 from db import db_dependency
 from models import User
@@ -61,16 +62,18 @@ class Token(BaseModel):
     token_type: str
 
 
-def get_password_hash(password):
+async def get_password_hash(password):
     return bcrypt.hash(password)
 
 
-def verify_password(plain_password, hashed_password):
+async def verify_password(plain_password, hashed_password):
     return bcrypt.verify(plain_password, hashed_password)
 
 
-def authenticate_user(username: str, password: str, db):
-    user = db.query(User).filter(User.username == username).first()
+async def authenticate_user(username: str, password: str, db):
+    user = await db.execute(select(User).filter(User.username == username))
+    user = user.scalar_one_or_none()
+    print(user, "user")
     if not user:
         return False
     if not bcrypt.verify(password, user.password):
@@ -78,7 +81,7 @@ def authenticate_user(username: str, password: str, db):
     return user
 
 
-def create_access_token(
+async def create_access_token(
     username: str, user_id: int, user_role: str, expires_delta: timedelta
 ):
     to_encode = {"username": username, "user_id": user_id, "user_role": user_role}
@@ -123,11 +126,12 @@ async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: db_dependency,
 ):
-    user = authenticate_user(form_data.username, form_data.password, db)
+    user = await authenticate_user(form_data.username, form_data.password, db)
+    print("hi2", user.username)
     if not user:
         return False
         # raise HTTPException(status_code=401, detail="Incorrect username or password")
-    token = create_access_token(
+    token = await create_access_token(
         user.username, user.id, user.role, timedelta(minutes=30)
     )
     response.set_cookie(key="access_token", value=token, httponly=True)
@@ -191,8 +195,8 @@ async def register(
     firstname: str = Form(...),
     lastname: str = Form(...),
 ):
-    validation1 = db.query(User).filter(User.username == username).first()
-    validation2 = db.query(User).filter(User.email == email).first()
+    validation1 = await db.query(User).filter(User.username == username).first()
+    validation2 = await db.query(User).filter(User.email == email).first()
 
     if validation1 is not None:
         msg = "Username already exists"
@@ -217,7 +221,7 @@ async def register(
     #     )
 
     try:
-        user = User(
+        user = await User(
             username=username,
             email=email,
             password=bcrypt.hash(password),
@@ -226,8 +230,8 @@ async def register(
             role="user",
             disabled=False,
         )
-        db.add(user)
-        db.commit()
+        await db.add(user)
+        await db.commit()
         msg = "Register successful"
         response = templates.TemplateResponse(
             "login.html", {"request": request, "msg": msg}

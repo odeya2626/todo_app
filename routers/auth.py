@@ -1,3 +1,6 @@
+import sys
+
+sys.path.append("...")
 from fastapi import (
     FastAPI,
     APIRouter,
@@ -127,7 +130,7 @@ async def login_for_access_token(
     db: db_dependency,
 ):
     user = await authenticate_user(form_data.username, form_data.password, db)
-    print("hi2", user.username)
+
     if not user:
         return False
         # raise HTTPException(status_code=401, detail="Incorrect username or password")
@@ -195,8 +198,10 @@ async def register(
     firstname: str = Form(...),
     lastname: str = Form(...),
 ):
-    validation1 = await db.query(User).filter(User.username == username).first()
-    validation2 = await db.query(User).filter(User.email == email).first()
+    validation1 = await db.execute(select(User).filter(User.username == username))
+    validation1 = validation1.scalar_one_or_none()
+    validation2 = await db.execute(select(User).filter(User.email == email))
+    validation2 = validation2.scalar_one_or_none()
 
     if validation1 is not None:
         msg = "Username already exists"
@@ -214,14 +219,8 @@ async def register(
             "register.html", {"request": request, "msg": msg}
         )
 
-    # if validation1 is not None or validation2 is not None or password != password2:
-    #     msg = "Invalid resignation information"
-    #     return templates.TemplateResponse(
-    #         "register.html", {"request": request, "msg": msg}
-    #     )
-
     try:
-        user = await User(
+        user = User(
             username=username,
             email=email,
             password=bcrypt.hash(password),
@@ -230,18 +229,25 @@ async def register(
             role="user",
             disabled=False,
         )
-        await db.add(user)
+        db.add(user)
         await db.commit()
         msg = "Register successful"
         response = templates.TemplateResponse(
             "login.html", {"request": request, "msg": msg}
         )
+        print(response)
         return response
     except HTTPException:
         msg = "Unknow error"
         return templates.TemplateResponse(
             "register.html", {"request": request, "msg": msg}
         )
+
+    # if validation1 is not None or validation2 is not None or password != password2:
+    #     msg = "Invalid resignation information"
+    #     return templates.TemplateResponse(
+    #         "register.html", {"request": request, "msg": msg}
+    #     )
 
 
 # # Exceptions

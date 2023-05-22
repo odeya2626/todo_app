@@ -13,18 +13,17 @@ from fastapi import (
     Request,
     Form,
 )
-from sqlalchemy.orm import Session
+
 from sqlalchemy import select
 from typing import Annotated
 from pydantic import BaseModel, Field
 from fastapi.responses import RedirectResponse
-
-from models import Todos, User
-from db import db_dependency, get_db
-from .auth import get_current_user, get_password_hash, verify_password
-
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+
+from models import User
+from db import db_dependency
+from .auth import get_current_user, get_password_hash, verify_password
 
 router = APIRouter(
     prefix="/users", tags=["users"], responses={404: {"description": "Not found"}}

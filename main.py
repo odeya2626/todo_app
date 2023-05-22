@@ -1,14 +1,18 @@
+import sys
+
+sys.path.append(".")
+
 import uvicorn
 from fastapi import FastAPI
-from starlette.staticfiles import StaticFiles
-
-import models
-from db import engine
-from routers import auth, todos, admin, users
+from fastapi.testclient import TestClient
 from fastapi import status
 from starlette.responses import RedirectResponse
+from starlette.staticfiles import StaticFiles
+from routers import auth, todos, admin, users
+
 
 app = FastAPI()
+
 app.include_router(auth.router)
 app.include_router(todos.router)
 app.include_router(admin.router)

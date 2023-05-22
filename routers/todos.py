@@ -1,3 +1,6 @@
+import sys
+
+sys.path.append("...")
 from fastapi import (
     FastAPI,
     APIRouter,
@@ -13,14 +16,13 @@ from sqlalchemy.orm import Session
 from typing import Annotated
 from pydantic import BaseModel, Field
 from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from sqlalchemy import select
 
 from models import Todos
 from db import db_dependency, get_db
 from .auth import get_current_user
-
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
 
 router = APIRouter(prefix="/todos", tags=["todos"])
 

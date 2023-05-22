@@ -1,3 +1,6 @@
+import sys
+
+sys.path.append("...")
 from fastapi import (
     FastAPI,
     APIRouter,
@@ -13,13 +16,13 @@ from sqlalchemy.orm import Session
 from typing import Annotated
 from pydantic import BaseModel, Field
 from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from sqlalchemy import select
 
 from models import Todos
 from db import db_dependency, get_db
 from .auth import get_current_user
-
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 
 router = APIRouter(prefix="/todos", tags=["todos"])
 
@@ -46,28 +49,60 @@ class TodoRequest(BaseModel):
 
 
 @router.get("/", response_class=HTMLResponse)
-async def read_all_by_user(request: Request, user: user_dependency, db: db_dependency):
-    if user is None:
-        return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
-    todos = (
-        db.query(Todos)
-        .filter(Todos.owner_id == user.get("user_id"))
-        .order_by(Todos.priority)
-        .all()
-    )
-    return templates.TemplateResponse(
-        "home.html", {"request": request, "user": user, "todos": todos}
-    )
+async def read_todos_user_search(
+    request: Request,
+    user: user_dependency,
+    db: db_dependency,
+    search: str | None = None,
+):
+    print(search)
+    if search is None:
+        search = ""
+    try:
+        if user is None:
+            return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
+        todos = await db.execute(
+            select(Todos)
+            .where(
+                (Todos.title.contains(search)) & (Todos.owner_id == user.get("user_id"))
+            )
+            .order_by(Todos.completed, Todos.priority)
+        )
+
+        todos = todos.scalars().all()
+        return templates.TemplateResponse(
+            "home.html", {"request": request, "user": user, "todos": todos}
+        )
+    except Exception as e:
+        db.rollback()
+        print(str(e))
+    # try:
+    #     if user is None:
+    #         return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
+    #     todos = await db.execute(
+    #         select(Todos).filter(Todos.owner_id == user.get("user_id"))
+    #     )
+    #     todos = todos.scalars().all()
+    #     print(todos)
+    #     return templates.TemplateResponse(
+    #         "home.html", {"request": request, "user": user, "todos": todos}
+    #     )
+    # except Exception as e:
+    #     db.rollback()
+    #     print(str(e))
 
 
 @router.get("/add-todo", response_class=HTMLResponse)
 async def add_new_todo(request: Request):
-    user = await get_current_user(request)
-    if user is None:
-        return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
-    return templates.TemplateResponse(
-        "add-todo.html", {"request": request, "user": user}
-    )
+    try:
+        user = await get_current_user(request)
+        if user is None:
+            return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
+        return templates.TemplateResponse(
+            "add-todo.html", {"request": request, "user": user}
+        )
+    except Exception as e:
+        print(str(e))
 
 
 @router.post("/add-todo", response_class=HTMLResponse)
@@ -76,20 +111,24 @@ async def create_new_todo(
     db: db_dependency,
     title: str = Form(...),
     description: str = Form(...),
-    priority: str = Form(...),
+    priority: int = Form(...),
 ):
-    user = await get_current_user(request)
-    if user is None:
-        return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
-    todo = Todos(
-        title=title,
-        description=description,
-        priority=priority,
-        owner_id=user.get("user_id"),
-    )
-    db.add(todo)
-    db.commit()
-    return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
+    try:
+        user = await get_current_user(request)
+        if user is None:
+            return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
+        todo = Todos(
+            title=title,
+            description=description,
+            priority=priority,
+            owner_id=user.get("user_id"),
+        )
+        db.add(todo)
+        await db.commit()
+        return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
+    except Exception as e:
+        db.rollback()
+        print(str(e))
 
 
 @router.get("/edit-todo/{todo_id}", response_class=HTMLResponse)
@@ -99,18 +138,22 @@ async def edit_todo(
     user: user_dependency,
     todo_id: int = Path(gt=0),
 ):
-    if user is None:
-        return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
-    todo_item = (
-        db.query(Todos)
-        .filter(Todos.id == todo_id)
-        .filter(Todos.owner_id == user.get("user_id"))
-        .first()
-    )
+    try:
+        if user is None:
+            return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
+        todo_item = await db.execute(
+            select(Todos).where(
+                (Todos.id == todo_id) & (Todos.owner_id == user.get("user_id"))
+            )
+        )
+        todo_item = todo_item.scalars().first()
 
-    return templates.TemplateResponse(
-        "edit-todo.html", {"request": request, "user": user, "todo": todo_item}
-    )
+        return templates.TemplateResponse(
+            "edit-todo.html", {"request": request, "user": user, "todo": todo_item}
+        )
+    except Exception as e:
+        db.rollback()
+        print(str(e))
 
 
 @router.post("/edit-todo/{todo_id}", response_class=HTMLResponse)
@@ -123,17 +166,22 @@ async def edit_todo(
     description: str = Form(...),
     priority: int = Form(...),
 ):
-    if user is None:
-        return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
-    todo_item = db.query(Todos).filter(Todos.id == todo_id).first()
-    print(title)
-    todo_item.title = title
-    todo_item.description = description
-    todo_item.priority = priority
+    try:
+        if user is None:
+            return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
+        todo_item = await db.execute(select(Todos).filter(Todos.id == todo_id))
+        todo_item = todo_item.scalars().first()
+        print(title)
+        todo_item.title = title
+        todo_item.description = description
+        todo_item.priority = priority
 
-    db.add(todo_item)
-    db.commit()
-    return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
+        db.add(todo_item)
+        await db.commit()
+        return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
+    except Exception as e:
+        db.rollback()
+        print(str(e))
 
 
 @router.get("/delete/{todo_id}", response_class=HTMLResponse)
@@ -143,39 +191,48 @@ async def delete_todo(
     user: user_dependency,
     todo_id: int,
 ):
-    if user is None:
-        return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
+    try:
+        if user is None:
+            return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
 
-    todo_item = (
-        db.query(Todos)
-        .filter(Todos.id == todo_id)
-        .filter(Todos.owner_id == user.get("user_id"))
-        .first()
-    )
+        todo_item = await db.execute(
+            select(Todos)
+            .filter(Todos.id == todo_id)
+            .filter(Todos.owner_id == user.get("user_id"))
+        )
+        todo_item = todo_item.scalars().first()
 
-    if todo_item is None:
+        if todo_item is None:
+            return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
+
+        # db.execute(select(Todos).filter(Todos.id == todo_id).delete()
+        await db.delete(todo_item)
+
+        await db.commit()
         return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
-
-    # db.query(Todos).filter(Todos.id == todo_id).delete()
-    db.delete(todo_item)
-
-    db.commit()
-    return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
+    except Exception as e:
+        db.rollback()
+        print(str(e))
 
 
 @router.get("/complete/{todo_id}", response_class=HTMLResponse)
 async def complete_todo(
     request: Request, user: user_dependency, db: db_dependency, todo_id: int
 ):
-    if user is None:
-        return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
-    print("hi")
-    todo_item = db.query(Todos).filter(Todos.id == todo_id).first()
-    print(todo_item)
-    todo_item.completed = not todo_item.completed
-    db.add(todo_item)
-    db.commit()
-    return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
+    try:
+        if user is None:
+            return RedirectResponse(url="/auth", status_code=status.HTTP_302_FOUND)
+
+        todo_item = await db.execute(select(Todos).filter(Todos.id == todo_id))
+        todo_item = todo_item.scalar_one_or_none()
+
+        todo_item.completed = not todo_item.completed
+        db.add(todo_item)
+        await db.commit()
+        return RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
+    except Exception as e:
+        db.rollback()
+        print(str(e))
 
 
 # @router.get("/")
@@ -184,7 +241,7 @@ async def complete_todo(
 #         raise HTTPException(
 #             status_code=401, detail="Invalid authentication credentials"
 #         )
-#     return db.query(Todos).filter(Todos.owner_id == user.get("user_id")).all()
+#     return db.execute(select(Todos).filter(Todos.owner_id == user.get("user_id")).all()
 
 
 # @router.get("/{todo_id}", status_code=status.HTTP_200_OK)

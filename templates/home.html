@@ -5,6 +5,33 @@
     <div class="card-body">
       <h5 class="card-title">List your todo</h5>
       <p class="card-text">Add your todo here</p>
+      <form method="GET" class="input-group search-form" id="search-form">
+        <input
+          type="text"
+          name="search"
+          class="search-input form-control"
+          id="search-input"
+          placeholder="Enter your search"
+        />
+        <button
+          class="btn btn-info search-btn input-group-append"
+          type="submit"
+          id="search-btn"
+          style="display: flex; align-items: center; justify-content: center"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M21.707,20.293l-4.54-4.54a8,8,0,1,0-1.414,1.414l4.54,4.54a1,1,0,0,0,1.414-1.414ZM10,16a6,6,0,1,1,6-6A6.007,6.007,0,0,1,10,16Z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
+      </form>
       <table class="table table-hover">
         <thead>
           <tr>

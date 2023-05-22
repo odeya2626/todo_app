@@ -1,4 +1,7 @@
-from db import Base, engine
+import sys
+
+sys.path.append("...")
+from db import Base
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 

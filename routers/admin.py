@@ -1,10 +1,13 @@
+import sys
+
+sys.path.append("...")
 from fastapi import FastAPI, APIRouter, Depends, Path, Body, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import Annotated
 from pydantic import BaseModel, Field
 
 from models import Todos
-from db import SessionLocal
+
 from .auth import get_current_user
 from db import db_dependency
 

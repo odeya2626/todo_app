@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 # client = TestClient(app)
 
 
-@pytest.mark.asyncio
 async def test_get_login_page(client: AsyncClient):
     print("client", client)
     response = await client.get("/auth")

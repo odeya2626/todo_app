@@ -1,27 +1,28 @@
 import sys
 
 sys.path.append("...")
-from fastapi import (
-    FastAPI,
-    APIRouter,
-    Depends,
-    Path,
-    Body,
-    HTTPException,
-    status,
-    Request,
-    Form,
-)
-from sqlalchemy.orm import Session
 from typing import Annotated
-from pydantic import BaseModel, Field
-from fastapi.responses import RedirectResponse
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
 
-from models import Todos
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    FastAPI,
+    Form,
+    HTTPException,
+    Path,
+    Request,
+    status,
+)
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
 from db import db_dependency, get_db
+from models import Todos
+
 from .auth import get_current_user
 
 router = APIRouter(prefix="/todos", tags=["todos"])

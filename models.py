@@ -1,8 +1,5 @@
-import sys
-
-sys.path.append("...")
 from db import Base
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 
@@ -42,8 +39,3 @@ class Address(Base):
     city = Column(String, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     user_address = relationship("User", back_populates="address")
-
-
-# User.__table__.create(bind=engine, checkfirst=True)
-# Todos.__table__.create(bind=engine, checkfirst=True)
-# Address.__table__.create(bind=engine, checkfirst=True)

@@ -1,31 +1,31 @@
 import sys
 
 sys.path.append("...")
-from fastapi import (
-    FastAPI,
-    APIRouter,
-    Depends,
-    Path,
-    Body,
-    HTTPException,
-    status,
-    Request,
-    Response,
-    Form,
-)
-from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
-from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from datetime import datetime, timedelta
 from typing import Annotated
-from jose import JWTError, jwt
-from datetime import timedelta, datetime
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
 
 from db import db_dependency
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.templating import Jinja2Templates
+from jose import JWTError, jwt
 from models import User
+from passlib.context import CryptContext
+from pydantic import BaseModel, Field
+from sqlalchemy import select
+
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    FastAPI,
+    Form,
+    HTTPException,
+    Path,
+    Request,
+    Response,
+    status,
+)
 
 router = APIRouter(
     prefix="/auth", tags=["auth"], responses={401: {"user": "Not authorized"}}
@@ -47,17 +47,6 @@ class LoginForm:
         form = await self.request.form()
         self.username = form.get("email")
         self.password = form.get("password")
-
-
-# class CreateUserRequest(BaseModel):
-#     username: str = Field(min_length=3)
-#     password: str = Field(min_length=3)
-#     email: str = Field(min_length=3)
-#     first_name: str = Field(min_length=3)
-#     last_name: str = Field(min_length=3)
-#     disabled: bool = Field(default=True)
-#     role: str = Field(default="user")
-#     phone_number: str or None = Field(default=None)
 
 
 class Token(BaseModel):
@@ -150,7 +139,6 @@ async def login_page(request: Request):
 @router.post("/", response_class=HTMLResponse)
 async def login(request: Request, db: db_dependency):
     try:
-        print(request)
         form = LoginForm(request)
         await form.create_oath_from()
         response = RedirectResponse(url="/todos", status_code=status.HTTP_302_FOUND)
@@ -158,7 +146,7 @@ async def login(request: Request, db: db_dependency):
         validate_user_cookie = await login_for_access_token(
             response=response, form_data=form, db=db
         )
-        print(validate_user_cookie)
+
         if not validate_user_cookie:
             msg = "Invalid username or password"
             return templates.TemplateResponse(

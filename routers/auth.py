@@ -1,18 +1,9 @@
 import sys
 
 sys.path.append("...")
+import os
 from datetime import datetime, timedelta
 from typing import Annotated
-
-from db import db_dependency
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi.templating import Jinja2Templates
-from jose import JWTError, jwt
-from models import User
-from passlib.context import CryptContext
-from pydantic import BaseModel, Field
-from sqlalchemy import select
 
 from fastapi import (
     APIRouter,
@@ -26,12 +17,22 @@ from fastapi import (
     Response,
     status,
 )
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.templating import Jinja2Templates
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from pydantic import BaseModel
+from sqlalchemy import select
+
+from db import db_dependency
+from models import User
 
 router = APIRouter(
     prefix="/auth", tags=["auth"], responses={401: {"user": "Not authorized"}}
 )
-SECRET_KEY = "vghlkjk,mcxsseaerfuiojml, mnvfxdsredui786554432"
-ALGORITHM = "HS256"
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
 templates = Jinja2Templates(directory="templates")
 bcrypt = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_bearer = OAuth2PasswordBearer(tokenUrl="auth/token")
